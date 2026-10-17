@@ -186,7 +186,8 @@ Here’s the stack, from what the user sees at the top down to the hardware at t
 
 Each layer relies on the one below it. The application sends a request to the model. The framework turns the model’s math into instructions the chip can run. The chip does the calculations, and memory supplies the weights and data it needs. You can click any box to ask a follow-up about that layer.
 
-__________________________________________________________________________________________________________________________________
+____________________________________________________________________________________________________________________________
+
 
 
 
