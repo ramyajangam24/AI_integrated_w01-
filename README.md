@@ -203,11 +203,12 @@ Housekeeping: receiving requests, tokenizing text, scheduling, and streaming res
 Which hardware fits each part
 
 Part of the job	Best hardware	Why
-Request handling, tokenizing, scheduling	CPU	Branch-heavy, varied logic that doesn’t parallelize well
-Prefill	GPU with tensor cores	Huge parallel matrix multiplies are exactly what tensor cores accelerate
-Decode	GPU with high-bandwidth memory (HBM)	Speed depends on how fast weights stream from memory, not on raw math
-Splitting the model across chips	Fast interconnect (NVLink, InfiniBand)	A 70B model at 16-bit needs about 140 GB for weights alone, more than one GPU holds, so chips must exchange data constantly
-
+| Part of the job | Best hardware | Why |
+|---|---|---|
+| Request handling, tokenizing, scheduling | CPU | Branch-heavy, varied logic that doesn't parallelize well |
+| Prefill | GPU with tensor cores | Huge parallel matrix multiplies are exactly what tensor cores accelerate |
+| Decode | GPU with high-bandwidth memory (HBM) | Speed depends on how fast weights stream from memory, not on raw math |
+| Splitting the model across chips | Fast interconnect (NVLink, InfiniBand) | A 70B model at 16-bit needs about 140 GB for weights alone, more than one GPU holds, so chips must exchange data constantly |
 Why a GPU is the main choice here
 
 It has enough parallel compute for prefill and enough memory bandwidth for decode.
