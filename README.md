@@ -74,5 +74,116 @@ Analogy continued: if the GPU is a big crew of line cooks, an NPU is a purpose-b
 
 ----------------------------------------------------------------------------------------------------------------------------
 
+**4.What does parallel computation mean?**
+
+Parallel computation means doing many calculations at the same time instead of one after another.
+
+Serial vs. parallel
+
+Serial (sequential): One worker does Task 1, then Task 2, then Task 3. Total time = the sum of all three.
+Parallel: Three workers each do one task simultaneously. Total time = roughly the time of the longest single task.
+Simple example
+
+Say you need to add up 1,000 numbers. One processor adds them one by one. With parallel computation, you split them into 10 groups of 100, let 10 processors each add their group at once, then combine the 10 partial sums. It finishes close to 10 times faster.
+
+What makes a task parallel-friendly
+
+The pieces must be independent, meaning one calculation doesn’t need the result of another before it can start. Good examples:
+
+Coloring each pixel of an image
+Multiplying the numbers in a matrix (the heart of AI)
+Running the same simulation with many different inputs
+What doesn’t parallelize well
+
+Tasks where each step depends on the one before it. For example, calculating “take the result, then use it to decide the next step, then repeat” can’t be split up easily, because step 3 can’t start until step 2 finishes.
+
+Where it happens in hardware
+
+Multi-core CPUs run a handful of tasks in parallel.
+GPUs run thousands of small calculations in parallel.
+Data centers link thousands of chips together to run enormous jobs in parallel across machines.
+Why it matters
+
+Individual chips can’t just keep getting faster, so adding more workers is the main way to gain speed. That’s why parallel hardware like GPUs and NPUs dominates AI.
+
+Analogy continued: serial computation is one cook making ten thousand sandwiches one at a time. Parallel computation is a thousand cooks each making ten sandwiches at once.
+
+-----------------------------------------------------------------------------------------------------------------------------
+
+**5.Why does AI depend so heavily on compute and memory?**
+
+AI depends on compute and memory because modern models are enormous, and both training and running them mean doing a staggering amount of math on a staggering amount of data.
+
+Why compute matters
+
+Models have billions of parameters. Each parameter is a number the model learned. Every time the model processes a piece of text or an image, it multiplies through a large share of those numbers.
+Training repeats this endlessly. Teaching a model means running it over trillions of data points, checking its errors, and adjusting every parameter, over and over. Large training runs can use thousands of GPUs for weeks or months.
+Scaling works. Bigger models trained on more data with more compute have reliably become more capable. That gives companies a strong incentive to keep scaling up, which keeps pushing demand higher.
+Inference adds up too. Each answer a model generates takes real computation, and with millions of users, serving costs become huge.
+Why memory matters
+
+The model must fit somewhere. A model with 70 billion parameters stored in 16-bit format needs about 140 GB just for its weights, more than most single GPUs hold. Larger models must be split across many chips.
+Training needs much more than the weights. It also stores gradients, optimizer state, and intermediate results, often several times the model’s size.
+Context takes space. When a model reads a long conversation or document, it keeps a running store of intermediate data (the KV cache) that grows with length.
+Bandwidth is often the bottleneck. Generating each word requires reading essentially all the model’s weights from memory. Often the chip can do the math faster than memory can deliver the data, so speed is limited by how fast data moves, not by raw compute. This is why AI GPUs use special high-bandwidth memory (HBM).
+Why chips need to be connected well
+
+When a model spans hundreds or thousands of chips, they must exchange data constantly. Fast interconnects (like NVLink or InfiniBand) become as important as the chips themselves.
+
+How the industry copes
+
+Lower-precision numbers (FP8, INT4) shrink memory use and speed up math.
+Quantization and compression make models smaller for devices like phones.
+Specialized hardware (GPUs, NPUs, TPUs) delivers more math per watt.
+Smarter model designs, such as mixture-of-experts, activate only part of the model for each token.
+Analogy continued: compute is how many cooks you have and how fast they work. Memory is the size of the kitchen and how quickly ingredients get delivered to the counter. A huge crew is useless if the pantry is too small or the delivery cart is too slow.
+
+-------------------------------------------------------------------------------------------------------------------------
+
+**6.What is the difference between training and inference from a hardware/computation point of view?**
+
+Training is teaching a model by adjusting its parameters. Inference is using the finished model to produce outputs. They stress hardware in quite different ways.
+
+What the computation looks like
+
+Training runs each example through the model (the forward pass), measures the error, then works backward through the whole model to compute how every parameter should change (the backward pass), and finally updates them. The backward pass costs roughly twice the forward pass, so training is about 3x the math of a single inference step, repeated over trillions of examples.
+Inference is just the forward pass. Parameters are frozen, nothing is updated, and no gradients are computed.
+Memory
+
+Training must hold the weights, the gradients, the optimizer state (often 2 extra copies of the weights for optimizers like Adam), and the intermediate results from the forward pass that the backward pass needs. This can be 4 to 10x the model’s own size, which is why training a large model needs many GPUs just to fit it.
+Inference needs the weights plus a working store for the context (the KV cache). That’s far less, so a model that took thousands of GPUs to train may run on a handful, or even one, after compression.
+What limits speed
+
+Training is compute-bound. Data is processed in big batches, so the chips are kept busy with huge matrix multiplications. The goal is maximum math throughput, which is where tensor cores shine.
+Inference is often memory-bandwidth-bound. When generating text one token at a time, each token requires reading nearly all the weights from memory to do relatively little math. The chip waits on memory, not on its own arithmetic. Batching many users’ requests together helps by reusing each read of the weights.
+Precision
+
+Training needs more numerical care (typically BF16 or FP16, with some higher-precision accumulation) so small updates aren’t lost.
+Inference tolerates much lower precision (FP8, INT8, even INT4) because the model is already trained, which saves memory and boosts speed.
+Scale and communication
+
+Training spreads one job across hundreds or thousands of chips that must constantly synchronize gradients, so fast interconnects (NVLink, InfiniBand) are critical. It runs for weeks as a single huge job.
+Inference is many small, independent requests. Chips mostly work separately, and the priorities are low latency (fast responses) and cost per request.
+Cost pattern
+
+Training is a large, one-time (or occasional) expense. Inference is smaller per request but recurs for every user, so for popular models total inference cost can eventually exceed training cost.
+
+Why this shapes hardware
+
+Training favors big, power-hungry GPUs and TPUs with fast interconnects.
+Inference favors efficiency, so you see NPUs, smaller GPUs, and chips optimized for low power and high memory bandwidth, including the NPUs in phones and laptops.
+
+Analogy continued: training is like writing and perfecting a recipe book: lots of trial, tasting, and revising, needing a big test kitchen and many cooks working in sync. Inference is the restaurant serving meals from the finished book: no more revising, just fast, efficient cooking for each customer, where ingredient delivery speed matters most.
+
+-----------------------------------------------------------------------------------------------------------------------------
+
+**7.Draw a simple picture showing: AI Application → AI Model → Software/Framework →
+CPU/GPU/Accelerator → Memory**
+
+<img width="626" height="882" alt="image" src="https://github.com/user-attachments/assets/c1abfdbd-5be9-4979-ab99-cca4ff573adf" />
+
+
+
+
 
 
