@@ -188,6 +188,44 @@ Each layer relies on the one below it. The application sends a request to the mo
 
 ____________________________________________________________________________________________________________________________
 
+**8.Pick one real AI workload and explain which type of compute hardware would be useful and why.**
+
+The workload: serving a chatbot (LLM inference) to many users at once
+
+Take a 70-billion-parameter model answering thousands of people at the same time. Each answer has to be fast, and the total cost has to stay manageable.
+
+What the work looks like
+
+Prefill: the model reads your whole prompt in one go. This is big matrix math across many tokens at once, so it’s compute-bound.
+Decode: the model generates the reply one token at a time. Each token requires reading nearly all the model’s weights from memory to do a small amount of math, so it’s memory-bandwidth-bound.
+Housekeeping: receiving requests, tokenizing text, scheduling, and streaming results back.
+
+Which hardware fits each part
+
+Part of the job	Best hardware	Why
+Request handling, tokenizing, scheduling	CPU	Branch-heavy, varied logic that doesn’t parallelize well
+Prefill	GPU with tensor cores	Huge parallel matrix multiplies are exactly what tensor cores accelerate
+Decode	GPU with high-bandwidth memory (HBM)	Speed depends on how fast weights stream from memory, not on raw math
+Splitting the model across chips	Fast interconnect (NVLink, InfiniBand)	A 70B model at 16-bit needs about 140 GB for weights alone, more than one GPU holds, so chips must exchange data constantly
+
+Why a GPU is the main choice here
+
+It has enough parallel compute for prefill and enough memory bandwidth for decode.
+It’s programmable, so it can run whatever new model architecture comes along, with mature software (CUDA, PyTorch) behind it.
+Batching many users’ requests together lets each read of the weights serve many people at once, which a GPU’s parallelism handles well.
+
+Where other accelerators come in
+
+TPUs or AWS Inferentia/Trainium: large providers use these to cut cost and power per request once the model and software are stable. The trade-off is less flexibility and a less mature ecosystem.
+NPU: not suited to the 70B version. But a small, compressed version of the model (say 3B parameters, quantized to 4-bit) can run on a phone or laptop NPU, which is efficient and keeps your data on the device.
+CPU alone: works for tiny models, but decode would be slow because system RAM has far lower bandwidth than HBM.
+
+The takeaway
+
+No single chip does it all. The CPU coordinates, GPUs (or TPUs) do the heavy lifting, and fast memory plus fast interconnects decide whether those chips stay busy or sit waiting. That’s the whole stack from your diagram working together on one real task.
+
+-----------------------------------------------------------------------------------------------------------------------------
+
 
 
 
